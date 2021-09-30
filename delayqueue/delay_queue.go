@@ -99,7 +99,6 @@ func bucket(id string) string {
 	size := config.Setting.BucketSize
 	h := hash(id)
 	s := fmt.Sprintf(config.Setting.BucketName, int(h) % size + 1)
-	log.Printf("%s Bucket %s, Size: %d", id, s, config.Setting.BucketSize)
 	return s
 }
 
@@ -151,6 +150,7 @@ func waitTicker(timer *time.Ticker, bucketName string) {
 
 // 扫描bucket, 取出延迟时间小于当前时间的Job
 func tickHandler(t time.Time, bucketName string) {
+	
 	for {
 		bucketItem, err := getFromBucket(bucketName)
 		if err != nil {
@@ -186,7 +186,7 @@ func tickHandler(t time.Time, bucketName string) {
 			// 从bucket中删除旧的jobId
 			removeFromBucket(bucketName, bucketItem.jobId)
 			// 重新计算delay时间并放入bucket中
-			pushToBucket(bucket(job.Id), job.Delay, bucketItem.jobId)
+			pushToBucket(bucketName, job.Delay, bucketItem.jobId)
 			continue
 		}
 
