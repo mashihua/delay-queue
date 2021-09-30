@@ -22,6 +22,8 @@ const (
 	DefaultBucketName          = "dq_bucket_%d"
 	// DefaultQueueName 队列名称
 	DefaultQueueName           = "dq_queue_%s"
+	// DefaultGetBueketMethod  0 为 hash 算法，1 为轮询算法
+	DefaultBueketMethod   = 0
 	// DefaultQueueBlockTimeout 轮询队列超时时间
 	DefaultQueueBlockTimeout   = 178
 	// DefaultRedisHost Redis连接地址
@@ -40,6 +42,8 @@ const (
 	DefaultRedisReadTimeout    = 180000
 	// DefaultRedisWriteTimeout Redis写入超时时间, 单位毫秒
 	DefaultRedisWriteTimeout   = 3000
+
+
 )
 
 // Config 应用配置
@@ -47,6 +51,7 @@ type Config struct {
 	BindAddress       string      // http server 监听地址
 	BucketSize        int         // bucket数量
 	BucketName        string      // bucket在redis中的键名,
+	BucketMethod	  int 		  // bucket name 的方法
 	QueueName         string      // ready queue在redis中的键名
 	QueueBlockTimeout int         // 调用blpop阻塞超时时间, 单位秒, 修改此项, redis.read_timeout必须做相应调整
 	Redis             RedisConfig // redis配置
@@ -86,6 +91,7 @@ func (config *Config) parse(path string) {
 	config.BindAddress = section.Key("bind_address").MustString(DefaultBindAddress)
 	config.BucketSize = section.Key("bucket_size").MustInt(DefaultBucketSize)
 	config.BucketName = section.Key("bucket_name").MustString(DefaultBucketName)
+	config.BucketMethod = section.Key("bucket_method").MustInt(DefaultBueketMethod)
 	config.QueueName = section.Key("queue_name").MustString(DefaultQueueName)
 	config.QueueBlockTimeout = section.Key("queue_block_timeout").MustInt(DefaultQueueBlockTimeout)
 
@@ -97,6 +103,7 @@ func (config *Config) parse(path string) {
 	config.Redis.ConnectTimeout = section.Key("redis.connect_timeout").MustInt(DefaultRedisConnectTimeout)
 	config.Redis.ReadTimeout = section.Key("redis.read_timeout").MustInt(DefaultRedisReadTimeout)
 	config.Redis.WriteTimeout = section.Key("redis.write_timeout").MustInt(DefaultRedisWriteTimeout)
+	
 }
 
 // 初始化默认配置
@@ -104,6 +111,7 @@ func (config *Config) initDefaultConfig() {
 	config.BindAddress = DefaultBindAddress
 	config.BucketSize = DefaultBucketSize
 	config.BucketName = DefaultBucketName
+	config.BucketMethod = DefaultBueketMethod
 	config.QueueName = DefaultQueueName
 	config.QueueBlockTimeout = DefaultQueueBlockTimeout
 

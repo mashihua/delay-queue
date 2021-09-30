@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-
+	"hash/fnv"
 	"github.com/ouqiang/delay-queue/config"
 )
 
@@ -34,7 +34,7 @@ func Push(job Job) error {
 		log.Printf("添加job到job pool失败#job-%+v#%s", job, err.Error())
 		return err
 	}
-	err = pushToBucket(<-bucketNameChan, job.Delay, job.Id)
+	err = pushToBucket(bucket(job.Id), job.Delay, job.Id)
 	if err != nil {
 		log.Printf("添加job到bucket失败#job-%+v#%s", job, err.Error())
 		return err
@@ -67,7 +67,7 @@ func Pop(topics []string) (*Job, error) {
 	}
 
 	timestamp := time.Now().Unix() + job.TTR
-	err = pushToBucket(<-bucketNameChan, timestamp, job.Id)
+	err = pushToBucket(bucket(job.Id), timestamp, job.Id)
 
 	return job, err
 }
@@ -91,6 +91,25 @@ func Get(jobId string) (*Job, error) {
 	return job, err
 }
 
+func bucket(id string) string {
+	if config.Setting.BucketMethod != 0 {
+		return <-bucketNameChan
+	}
+	// 同一 ID 分配相同的 Bucket 名称
+	size := config.Setting.BucketSize
+	h := hash(id)
+	s := fmt.Sprintf(config.Setting.BucketName, int(h) % size + 1)
+	log.Printf("%s Bucket %s, Size: %d", id, s, config.Setting.BucketSize)
+	return s
+}
+
+// string to int32  
+func hash(s string) uint32 {
+ 	h := fnv.New32a()
+ 	h.Write([]byte(s))
+ 	return h.Sum32()
+}
+
 // 轮询获取bucket名称, 使job分布到不同bucket中, 提高扫描速度
 func generateBucketName() <-chan string {
 	c := make(chan string)
@@ -108,6 +127,7 @@ func generateBucketName() <-chan string {
 
 	return c
 }
+
 
 // 初始化定时器
 func initTimers() {
@@ -166,7 +186,7 @@ func tickHandler(t time.Time, bucketName string) {
 			// 从bucket中删除旧的jobId
 			removeFromBucket(bucketName, bucketItem.jobId)
 			// 重新计算delay时间并放入bucket中
-			pushToBucket(<-bucketNameChan, job.Delay, bucketItem.jobId)
+			pushToBucket(bucket(job.Id), job.Delay, bucketItem.jobId)
 			continue
 		}
 
