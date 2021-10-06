@@ -2,7 +2,8 @@ package config
 
 import (
 	"log"
-
+	"os"
+	"strconv"
 	"gopkg.in/ini.v1"
 )
 
@@ -88,21 +89,21 @@ func (config *Config) parse(path string) {
 	}
 
 	section := file.Section("")
-	config.BindAddress = section.Key("bind_address").MustString(DefaultBindAddress)
-	config.BucketSize = section.Key("bucket_size").MustInt(DefaultBucketSize)
-	config.BucketName = section.Key("bucket_name").MustString(DefaultBucketName)
-	config.BucketMethod = section.Key("bucket_method").MustInt(DefaultBueketMethod)
-	config.QueueName = section.Key("queue_name").MustString(DefaultQueueName)
+	config.BindAddress = GetEnvString("HOST", section.Key("bind_address").MustString(DefaultBindAddress))
+	config.BucketSize, _ = GetEnvInt("BUCKET_SIZE" , section.Key("bucket_size").MustInt(DefaultBucketSize))
+	config.BucketName = GetEnvString("BUCKET_NAME", section.Key("bucket_name").MustString(DefaultBucketName))
+	config.BucketMethod, _ = GetEnvInt("BUCKET_METHOD", section.Key("bucket_method").MustInt(DefaultBueketMethod))
+	config.QueueName = GetEnvString("QUEUE_NAME", section.Key("queue_name").MustString(DefaultQueueName))
 	config.QueueBlockTimeout = section.Key("queue_block_timeout").MustInt(DefaultQueueBlockTimeout)
 
-	config.Redis.Host = section.Key("redis.host").MustString(DefaultRedisHost)
-	config.Redis.Db = section.Key("redis.db").MustInt(DefaultRedisDb)
-	config.Redis.Password = section.Key("redis.password").MustString(DefaultRedisPassword)
-	config.Redis.MaxIdle = section.Key("redis.max_idle").MustInt(DefaultRedisMaxIdle)
-	config.Redis.MaxActive = section.Key("redis.max_active").MustInt(DefaultRedisMaxActive)
-	config.Redis.ConnectTimeout = section.Key("redis.connect_timeout").MustInt(DefaultRedisConnectTimeout)
-	config.Redis.ReadTimeout = section.Key("redis.read_timeout").MustInt(DefaultRedisReadTimeout)
-	config.Redis.WriteTimeout = section.Key("redis.write_timeout").MustInt(DefaultRedisWriteTimeout)
+	config.Redis.Host = GetEnvString("REDIS_HOST", section.Key("redis.host").MustString(DefaultRedisHost))
+	config.Redis.Db, _ = GetEnvInt("REDIS_DB", section.Key("redis.db").MustInt(DefaultRedisDb))
+	config.Redis.Password = GetEnvString("REDIS_PASSWORD",section.Key("redis.password").MustString(DefaultRedisPassword))
+	config.Redis.MaxIdle, _ = GetEnvInt("REDIS_IDLE", section.Key("redis.max_idle").MustInt(DefaultRedisMaxIdle))
+	config.Redis.MaxActive, _ = GetEnvInt("REDIS_ACTIVE", section.Key("redis.max_active").MustInt(DefaultRedisMaxActive))
+	config.Redis.ConnectTimeout, _ = GetEnvInt("REDIS_TIMEOUT", section.Key("redis.connect_timeout").MustInt(DefaultRedisConnectTimeout))
+	config.Redis.ReadTimeout, _ = GetEnvInt("REDIS_READ_TIMEOUT", section.Key("redis.read_timeout").MustInt(DefaultRedisReadTimeout))
+	config.Redis.WriteTimeout, _ = GetEnvInt("REDIS_WRITE_TIMEOUT", section.Key("redis.write_timeout").MustInt(DefaultRedisWriteTimeout))
 	
 }
 
@@ -123,4 +124,49 @@ func (config *Config) initDefaultConfig() {
 	config.Redis.ConnectTimeout = DefaultRedisConnectTimeout
 	config.Redis.ReadTimeout = DefaultRedisReadTimeout
 	config.Redis.WriteTimeout = DefaultRedisWriteTimeout
+}
+
+// GetEnvString gets the environment variable for a key and if that env-var hasn't been set it returns the default value
+func GetEnvString(key string, defaultVal string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		value = defaultVal
+	}
+	return value
+}
+
+// GetEnvBool gets the environment variable for a key and if that env-var hasn't been set it returns the default value
+func GetEnvBool(key string, defaultVal bool) (bool, error) {
+	envvalue := os.Getenv(key)
+	if len(envvalue) == 0 {
+		value := defaultVal
+		return value, nil
+	}
+
+	value, err := strconv.ParseBool(envvalue)
+	return value, err
+}
+
+// GetEnvInt gets the environment variable for a key and if that env-var hasn't been set it returns the default value. This function is equivalent to ParseInt(s, 10, 0) to convert env-vars to type int
+func GetEnvInt(key string, defaultVal int) (int, error) {
+	envvalue := os.Getenv(key)
+	if len(envvalue) == 0 {
+		value := defaultVal
+		return value, nil
+	}
+
+	value, err := strconv.Atoi(envvalue)
+	return value, err
+}
+
+// GetEnvFloat gets the environment variable for a key and if that env-var hasn't been set it returns the default value. This function uses bitSize of 64 to convert string to float64.
+func GetEnvFloat(key string, defaultVal float64) (float64, error) {
+	envvalue := os.Getenv(key)
+	if len(envvalue) == 0 {
+		value := defaultVal
+		return value, nil
+	}
+
+	value, err := strconv.ParseFloat(envvalue, 64)
+	return value, err
 }
